@@ -1,0 +1,32 @@
+﻿[
+  {
+    "gl_dimension_pkids": "1001,1002",
+    "gl_dimension_code": "XYZ,ABC",
+    "gl_code_reference": "anything",
+    "gl_code": "XYZ",
+    "item_code": "X1000",
+    "item_type": "INV",
+    "qty": 10,
+    "unit_price": 20
+  },
+  {
+    "gl_dimension_pkids": "1001,1002",
+    "gl_dimension_code": "XYZ,ABC",
+    "gl_code_reference": "anything",
+    "gl_code": "XYZ",
+    "item_code": "X2000",
+    "item_type": "INV",
+    "qty": 100,
+    "unit_price": 200
+  },
+  {
+    "gl_dimension_pkids": "1001,1002",
+    "gl_dimension_code": "XYZ,ABC",
+    "gl_code_reference": "anything",
+    "gl_code": "XYZ",
+    "item_code": "X3000",
+    "item_type": "INV",
+    "qty": 1,
+    "unit_price": 2000
+  }
+]

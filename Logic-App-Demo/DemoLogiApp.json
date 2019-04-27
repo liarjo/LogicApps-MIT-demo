@@ -1,0 +1,210 @@
+﻿{
+  "$connections": {
+    "value": {
+      "outlook": {
+        "connectionId": "/subscriptions/xxxxxxxxxxxxxxxxxxxxxxx/resourceGroups/MIT-DEMO-LogicApps/providers/Microsoft.Web/connections/outlook",
+        "connectionName": "outlook",
+        "id": "/subscriptions/xxxxxxxxxxxxxxxxxxxxxxx/providers/Microsoft.Web/locations/eastus2/managedApis/outlook"
+      },
+      "sql": {
+        "connectionId": "/subscriptions/xxxxxxxxxxxxxxxxxxxxxxx/resourceGroups/MIT-DEMO-LogicApps/providers/Microsoft.Web/connections/sql",
+        "connectionName": "sql",
+        "id": "/subscriptions/xxxxxxxxxxxxxxxxxxxxxxx/providers/Microsoft.Web/locations/eastus2/managedApis/sql"
+      }
+    }
+  },
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "actions": {
+      "Calc_Total_Order_Loop": {
+        "actions": {
+          "Calc_Total_Order_Price": {
+            "inputs": {
+              "name": "OrderTotal",
+              "value": "@mul(items('Calc_Total_Order_Loop')['unit_price'],items('Calc_Total_Order_Loop')['qty'])"
+            },
+            "runAfter": {},
+            "type": "IncrementVariable"
+          }
+        },
+        "foreach": "@triggerBody()",
+        "runAfter": {
+          "Initialize_OrderTotal": [
+            "Succeeded"
+          ]
+        },
+        "type": "Foreach"
+      },
+      "Initialize_OrderTotal": {
+        "inputs": {
+          "variables": [
+            {
+              "name": "OrderTotal",
+              "type": "Integer",
+              "value": 0
+            }
+          ]
+        },
+        "runAfter": {},
+        "type": "InitializeVariable"
+      },
+      "MaxOrderLimit": {
+        "actions": {
+          "InsertAllProductsLoop": {
+            "actions": {
+              "InsertProductDetails": {
+                "inputs": {
+                  "body": {
+                    "gl_code": "@items('InsertAllProductsLoop')['gl_code']",
+                    "gl_code_reference": "@items('InsertAllProductsLoop')['gl_code_reference']",
+                    "gl_dimension_code": "@items('InsertAllProductsLoop')['gl_dimension_code']",
+                    "gl_dimension_pkids": "@items('InsertAllProductsLoop')['gl_dimension_pkids']",
+                    "item_code": "@items('InsertAllProductsLoop')['item_code']",
+                    "item_type": "@items('InsertAllProductsLoop')['item_type']",
+                    "qty": "@items('InsertAllProductsLoop')['qty']",
+                    "unit_price": "@items('InsertAllProductsLoop')['unit_price']"
+                  },
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['sql']['connectionId']"
+                    }
+                  },
+                  "method": "post",
+                  "path": "/datasets/default/tables/@{encodeURIComponent(encodeURIComponent('OrderLines'))}/items"
+                },
+                "runAfter": {},
+                "type": "ApiConnection"
+              }
+            },
+            "foreach": "@triggerBody()",
+            "runAfter": {},
+            "type": "Foreach"
+          },
+          "OrderCreated": {
+            "inputs": {
+              "body": {
+                "TotalOrder": "@variables('OrderTotal')"
+              },
+              "statusCode": 201
+            },
+            "runAfter": {
+              "InsertAllProductsLoop": [
+                "Succeeded"
+              ]
+            },
+            "type": "Response"
+          }
+        },
+        "else": {
+          "actions": {
+            "InvalidOrder": {
+              "inputs": {
+                "body": "Max order price limit",
+                "statusCode": 403
+              },
+              "kind": "Http",
+              "runAfter": {
+                "SendExceptionEmail": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Response"
+            },
+            "SendExceptionEmail": {
+              "inputs": {
+                "body": {
+                  "Body": "the order price is USD $ @{variables('OrderTotal')}",
+                  "Subject": "Max order price limit",
+                  "To": "jpgarciaazure@hotmail.com"
+                },
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['outlook']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/Mail"
+              },
+              "runAfter": {},
+              "type": "ApiConnection"
+            }
+          }
+        },
+        "expression": {
+          "and": [
+            {
+              "lessOrEquals": [
+                "@variables('OrderTotal')",
+                10000
+              ]
+            }
+          ]
+        },
+        "runAfter": {
+          "Calc_Total_Order_Loop": [
+            "Succeeded"
+          ]
+        },
+        "type": "If"
+      }
+    },
+    "contentVersion": "1.0.0.0",
+    "outputs": {},
+    "parameters": {
+      "$connections": {
+        "defaultValue": {},
+        "type": "Object"
+      }
+    },
+    "triggers": {
+      "request": {
+        "inputs": {
+          "schema": {
+            "items": {
+              "properties": {
+                "gl_code": {
+                  "type": "string"
+                },
+                "gl_code_reference": {
+                  "type": "string"
+                },
+                "gl_dimension_code": {
+                  "type": "string"
+                },
+                "gl_dimension_pkids": {
+                  "type": "string"
+                },
+                "item_code": {
+                  "type": "string"
+                },
+                "item_type": {
+                  "type": "string"
+                },
+                "qty": {
+                  "type": "integer"
+                },
+                "unit_price": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "gl_dimension_pkids",
+                "gl_dimension_code",
+                "gl_code_reference",
+                "gl_code",
+                "item_code",
+                "item_type",
+                "qty",
+                "unit_price"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "kind": "Http",
+        "type": "Request"
+      }
+    }
+  }
+}
